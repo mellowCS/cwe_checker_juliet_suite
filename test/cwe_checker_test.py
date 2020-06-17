@@ -1,6 +1,5 @@
 import argparse
 import os
-from pathlib import Path
 import re
 
 
@@ -11,23 +10,23 @@ class UnknownCweException(Exception):
 known_modules = ['CWE190', 'CWE367', 'CWE415', 'CWE416', 'CWE426', 'CWE457', 'CWE467', 'CWE476', 'CWE676']
 
 
-def build_bap_cmd(filename: str, target: str, arch: str, compiler: str) -> list:
+def build_bap_cmd(filename: str, target: str) -> list:
     if 'travis' in os.environ['USER']:
-        abs_path = os.path.abspath(f'test/artificial_samples/build/CWE_{filename}_{arch}_{compiler}')
+        abs_path = os.path.abspath(f'../build/{filename}')
         cmd = f'docker run --rm -v {abs_path}:/tmp/input cwe-checker:latest bap /tmp/input --pass=cwe-checker ' \
               f'--cwe-checker-partial=CWE{target}  --cwe-checker-config=/home/bap/cwe_checker/src/config.json'
     else:
-        cmd = f'bap test/artificial_samples/build/CWE_{filename}_{arch}_{compiler} --pass=cwe-checker ' \
+        cmd = f'bap ../build/{filename} --pass=cwe-checker ' \
               f'--cwe-checker-partial=CWE{target} --cwe-checker-config=src/config.json'
     return cmd.split()
 
 
-def build_bap_emulation_cmd(filename: str, arch: str, compiler: str) -> list:
+def build_bap_emulation_cmd(filename: str) -> list:
     if 'travis' in os.environ['USER']:
-        abs_path = os.path.abspath(f'test/artificial_samples/build/cwe_{filename}_{arch}_{compiler}.out')
+        abs_path = os.path.abspath(f'../build/{filename}')
         cmd = f'docker run --rm -v {abs_path}:/tmp/input cwe-checker:latest bap /tmp/input --recipe=recipes/emulation'
     else:
-        cmd = f'bap test/artificial_samples/build/cwe_{filename}_{arch}_{compiler}.out --recipe=recipes/emulation'
+        cmd = f'bap ../build/{filename} --recipe=recipes/emulation'
     return cmd.split()
 
 
@@ -42,11 +41,13 @@ def run_cwe_checker_on_test_suite(user_input: argparse.Namespace):
         files = get_test_file(cwe=mod)
         if mod in ['CWE415', 'CWE416']:
             for file in files:
-                build_bap_emulation_cmd(filename=file.rpartition('/')[1], arch='x64', compiler='gcc')
+                build_bap_emulation_cmd(filename=file.rpartition('/')[1])
         else:
             for file in files:
                 name = file.rpartition('/')[1]
-                build_bap_cmd(filename=name, target=name.rpartition('E')[1], arch='x64', compiler='gcc')
+                cwe_num = re.compile(r'CWE(\d+)(_s\d+)?$')
+                target = cwe_num.search(name).group(1)
+                build_bap_cmd(filename=name, target=target)
 
 
 def sanitise_user_input(args):
