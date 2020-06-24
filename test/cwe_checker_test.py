@@ -39,18 +39,21 @@ def remove_ignored_files(files: list):
     return [file for file in files if not ignored.match(str(file))]
 
 
-def count_testcases():
+def count_testcases() -> dict:
     testcase_path = Path(__file__).absolute().parent.parent / 'testcases'
+    testcases_per_module = dict()
     for cwe in testcase_path.glob('CWE*'):
         module = str(cwe).rsplit('/')[-1].split('_')[0]
         if module in known_modules.keys():
             if is_split(cwe):
                 for split in cwe.glob('s*'):
                     files = remove_ignored_files(list(split.glob('*.c*')))
-                    print(f'Module: {module}, Split: {str(split).rsplit("/")[-1]}, Number of Testcases: {len(files)}')
+                    testcases_per_module[module + '_' + str(split).rsplit("/")[-1]] = len(files)
             else:
                 files = remove_ignored_files(list(cwe.glob('*.c*')))
-                print(f'Module: {module}, Number of Testcases: {len(files)}')
+                testcases_per_module[module] = len(files)
+
+    return testcases_per_module
 
 
 def execute_and_check_occurrence(bap_cmd, string):
@@ -83,11 +86,12 @@ def build_bap_cmd(filename: str, target: str, docker: bool = False, config: str 
 
 
 def build_bap_emulation_cmd(filename: str, docker: bool = False) -> list:
+    recipe_path = Path.home() / 'cwe_checker/recipes/emulation/'
     if docker:
         abs_path = Path.cwd().parent / f'build/{filename}'
         cmd = f'docker run --rm -v {abs_path}:/tmp/input cwe-checker:latest bap /tmp/input --recipe=recipes/emulation'
     else:
-        cmd = f'bap ../build/{filename} --recipe=recipes/emulation'
+        cmd = f'bap ../build/{filename} --recipe={recipe_path}'
     return cmd.split()
 
 
@@ -96,15 +100,24 @@ def get_test_files(cwe: str) -> Generator[Path, None, None]:
     return build_path.glob(cwe + '*')
 
 
+def display_results(file: str, detected: int, expected: dict):
+    cwe = file.rsplit('/')[-1]
+    if expected[cwe] == detected:
+        print(f'PASSED: [Test] {cwe}: expected detections: {expected[cwe]}, actual detections: {detected}')
+    else:
+        print(f'FAILED: [Test] {cwe}: expected detections: {expected[cwe]}, actual detections: {detected}')
+
+
 def run_cwe_checker_on_test_suite(user_input: argparse.Namespace):
     modules = known_modules.keys() if user_input.all else user_input.partial
-
+    testcases_per_cwe = count_testcases()
     for mod in modules:
         files = get_test_files(cwe=mod)
         if mod in ['CWE415', 'CWE416']:
             for file in files:
                 cmd = build_bap_emulation_cmd(filename=str(file).rpartition('/')[2])
-                print(execute_emulation_and_check_occurrence(bap_cmd=cmd, string=known_modules[mod]))
+                detected = execute_emulation_and_check_occurrence(bap_cmd=cmd, string=known_modules[mod])
+                display_results(file=str(file), detected=detected, expected=testcases_per_cwe)
         else:
             for file in files:
                 name = str(file).rpartition('/')[2]
@@ -114,7 +127,8 @@ def run_cwe_checker_on_test_suite(user_input: argparse.Namespace):
                     cmd = build_bap_cmd(filename=name, target=target, config=user_input.config)
                 else:
                     cmd = build_bap_cmd(filename=name, target=target)
-                print(execute_and_check_occurrence(bap_cmd=cmd, string=known_modules[mod]))
+                detected = execute_and_check_occurrence(bap_cmd=cmd, string=known_modules[mod])
+                display_results(file=str(file), detected=detected, expected=testcases_per_cwe)
 
 
 def sanitise_user_input(args: argparse.Namespace):
