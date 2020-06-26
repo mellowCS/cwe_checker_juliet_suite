@@ -124,9 +124,9 @@ def run_cwe_checker_on_test_suite(user_input: argparse.Namespace):
                 cwe_num = re.compile(r'CWE(\d+)(_s\d+)?$')
                 target = cwe_num.search(name).group(1)
                 if user_input.config:
-                    cmd = build_bap_cmd(filename=name, target=target, config=user_input.config)
+                    cmd = build_bap_cmd(filename=name, target=target, docker=user_input.docker, config=user_input.config)
                 else:
-                    cmd = build_bap_cmd(filename=name, target=target)
+                    cmd = build_bap_cmd(filename=name, docker=user_input.docker, target=target)
                 detected = execute_and_check_occurrence(bap_cmd=cmd, string=known_modules[mod])
                 display_results(file=str(file), detected=detected, expected=testcases_per_cwe)
 
@@ -135,7 +135,7 @@ def sanitise_user_input(args: argparse.Namespace):
     if args.partial:
         if not all(cwe in known_modules.keys() for cwe in args.partial):
             raise UnknownCweException(f'\n\nCWE is not supported by either the CWE checker or the juliet test suite.\n'
-                                      f'Supported CWEs are: {known_modules.keys()}\n')
+                                      f'Supported CWEs are: {list(known_modules.keys())}\n')
     if args.config:
         if not Path(args.config).is_file():
             raise InvalidPathException(f'\n\nPath: {args.config} is not a file.\n')
