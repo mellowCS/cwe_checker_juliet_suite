@@ -17,7 +17,7 @@ Just clone the repository into some directory:
 git clone https://github.com/mellowCS/cwe_checker_juliet_suite.git
 ```
 
-and call **handle_make.py** in the project's root directory like:
+and call **handle_make.py** in the project's root directory with -a or --all:
 
 ```
 python3 handle_make.py --all
@@ -26,13 +26,47 @@ python3 handle_make.py --all
 to initialise the compilation of all CWEs. Each binary will be stored in a dedicated **build** directory in the root of the project.
 **Hint:** You may want to run it in *sudo*.
 
-After everything has been compiled
+After everything has been compiled, **handle_make.py** can be called with -c or --clean
 
 ```
 python3 handle_make.py --clean
 ```
 
-can be called to remove all *.o and *.out files.
+to remove all *.o and *.out files.
+
+Additionally **handle_make.py** has a -rb or --remove-bat flag which removes all bat files that are
+used to run tests in Visual Studio as they are unnecessary
+
+```
+python3 handle_make.py --remove-bat
+```
+
+## Tests
+
+To run the CWE checker on the test suite, we provide a dedicated script **cwe_checker_test.py** that can be
+found in the test folder. It allows to either run all supported CWEs on the test suite using the following command
+
+```
+python3 cwe_checker_test.py --all
+```
+
+or to only run user specified CWEs on the test suite using the following command and a list of CWEs
+
+```
+python3 cwe_checker_test.py --partial CWEXXX CWEYYY
+```
+
+If the user is running the CWE checker in a docker container, the docker flag can additionally be added to the command
+
+```
+python3 cwe_checker_test.py --all --docker
+```
+
+The user can also provide their own config json for the CWE checker by providing the path to the command
+
+```
+python3 cwe_checker_test.py --all --config /path/to/config_file
+```
 
 ## Dev
 

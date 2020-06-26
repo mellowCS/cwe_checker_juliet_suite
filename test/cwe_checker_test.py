@@ -144,7 +144,7 @@ def sanitise_user_input(args: argparse.Namespace):
 
 
 def get_user_input() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(epilog=f'Supported CWEs: {list(known_modules.keys())}')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-a', '--all', action='store_true', dest='all',
                        help='Run all CWE checks on the juliet test suite.')
