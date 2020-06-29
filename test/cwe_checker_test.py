@@ -115,7 +115,7 @@ def run_cwe_checker_on_test_suite(user_input: argparse.Namespace):
         files = get_test_files(cwe=mod)
         if mod in ['CWE415', 'CWE416']:
             for file in files:
-                cmd = build_bap_emulation_cmd(filename=str(file).rpartition('/')[2])
+                cmd = build_bap_emulation_cmd(filename=str(file).rpartition('/')[2], docker=user_input.docker)
                 detected = execute_emulation_and_check_occurrence(bap_cmd=cmd, string=known_modules[mod])
                 display_results(file=str(file), detected=detected, expected=testcases_per_cwe)
         else:
